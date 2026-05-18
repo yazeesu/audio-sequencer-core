@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import React, { FC, useMemo, useSyncExternalStore } from "react";
+import React, { FC, useMemo, useState, useSyncExternalStore } from "react";
 import { useMIDIPlayer } from "@/src/player/hooks/use-midi-player";
 import {
   MIDIPlaybackEngine,
@@ -14,14 +14,16 @@ export default function SongPlayerPage() {
   const { songId } = useParams<{ songId: string }>();
   const songSource = useMemo(() => `/songs/${songId}.mid`, [songId]);
 
+  const [currentTrack, setCurrentTrack] = useState<number | null>(null);
+
   const { state, engineRef, playableTracks, handlePlay, handleStop } =
     useMIDIPlayer(songSource);
 
   const targetTrack = useMemo(() => {
     if (state.value === "idle" || state.value === "loading") return null;
     if (!playableTracks.length) return null;
-    return engineRef.current?.getSource()?.tracks[2];
-  }, [state.value, playableTracks]);
+    return engineRef.current?.getSource()?.tracks[currentTrack ?? 0];
+  }, [state.value, playableTracks, currentTrack]);
 
   return (
     <div className="flex flex-col gap-4 p-16">
@@ -30,6 +32,14 @@ export default function SongPlayerPage() {
         <button onClick={handlePlay}>Play</button>
         <button onClick={handleStop}>Stop</button>
         <p>Status : {state.value}</p>
+      </div>
+      <div className="flex flex-col gap-4">
+        <p>Tracks</p>
+        {playableTracks.map((track) => (
+          <button key={track.id} onClick={() => setCurrentTrack(track.id)}>
+            {track.id} - {track.instrument.family} - {track.instrument.name}
+          </button>
+        ))}
       </div>
       {engineRef.current && targetTrack && (
         <TrackVisualizer
