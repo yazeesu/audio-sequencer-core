@@ -11,11 +11,18 @@ import {
   ObservableAudioPlayerEngine,
 } from "./core";
 
+export enum MIDIPlaybackEngineEvents {
+  TIME_SIGNATURE_CHANGED = "time-signature-changed",
+  BEATS_PER_MINUTE_CHANGED = "beats-per-minute-changed",
+  TOTAL_LENGTH_CHANGED = "total-length-changed",
+  CURRENT_TIME_CHANGED = "current-time-changed",
+}
+
 export type MIDIPlaybackEngineEventMap = {
-  "time-signature-changed": [number, number];
-  "beats-per-minute-changed": number;
-  "total-length-changed": number;
-  "current-time-changed": number;
+  [MIDIPlaybackEngineEvents.TIME_SIGNATURE_CHANGED]: [number, number];
+  [MIDIPlaybackEngineEvents.BEATS_PER_MINUTE_CHANGED]: number;
+  [MIDIPlaybackEngineEvents.TOTAL_LENGTH_CHANGED]: number;
+  [MIDIPlaybackEngineEvents.CURRENT_TIME_CHANGED]: number;
 };
 
 /**
@@ -165,10 +172,22 @@ export class MIDIPlaybackEngine
 
       this.source = midi;
 
-      this.emit("time-signature-changed", this.getTimeSignature());
-      this.emit("beats-per-minute-changed", this.getBeatsPerMinute());
-      this.emit("total-length-changed", this.getTotalLength());
-      this.emit("current-time-changed", this.getCurrentTime());
+      this.emit(
+        MIDIPlaybackEngineEvents.TIME_SIGNATURE_CHANGED,
+        this.getTimeSignature(),
+      );
+      this.emit(
+        MIDIPlaybackEngineEvents.BEATS_PER_MINUTE_CHANGED,
+        this.getBeatsPerMinute(),
+      );
+      this.emit(
+        MIDIPlaybackEngineEvents.TOTAL_LENGTH_CHANGED,
+        this.getTotalLength(),
+      );
+      this.emit(
+        MIDIPlaybackEngineEvents.CURRENT_TIME_CHANGED,
+        this.getCurrentTime(),
+      );
 
       return {
         success: true,
@@ -203,6 +222,36 @@ export class MIDIPlaybackEngine
     this.transport.position = 0;
     this.transport.bpm.value = this.getBeatsPerMinute();
 
+    this.scheduleInstruments();
+    this.schedulePlayTracker();
+
+    this.transport.start();
+  }
+
+  async restart(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async pause(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  async stop(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  dispose(): void {
+    this.transport.stop();
+    this.transport.cancel();
+
+    this.orchestrator.forEach((instrument) => instrument.dispose());
+    this.orchestrator.clear();
+
+    this.source = null;
+  }
+
+  private scheduleInstruments() {
+    if (this.source === null) return;
     this.source.tracks.forEach((track) => {
       const instrument = this.orchestrator.get(
         track.instrument.family + "__" + track.instrument.name,
@@ -230,35 +279,16 @@ export class MIDIPlaybackEngine
         }, end);
       });
     });
+  }
 
+  private schedulePlayTracker() {
     this.transport.scheduleRepeat((time) => {
       Tone.getDraw().schedule(() => {
-        this.emit("current-time-changed", this.getCurrentTime());
+        this.emit(
+          MIDIPlaybackEngineEvents.CURRENT_TIME_CHANGED,
+          this.getCurrentTime(),
+        );
       }, time);
     }, 1 / 60);
-
-    this.transport.start();
-  }
-
-  async restart(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async pause(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async stop(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  dispose(): void {
-    this.transport.stop();
-    this.transport.cancel();
-
-    this.orchestrator.forEach((instrument) => instrument.dispose());
-    this.orchestrator.clear();
-
-    this.source = null;
   }
 }

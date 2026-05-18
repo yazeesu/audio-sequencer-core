@@ -3,7 +3,10 @@
 import { useParams } from "next/navigation";
 import React, { FC, useMemo, useSyncExternalStore } from "react";
 import { useMIDIPlayer } from "@/src/player/hooks/use-midi-player";
-import { MIDIPlaybackEngine } from "@/src/audio/playback/engine";
+import {
+  MIDIPlaybackEngine,
+  MIDIPlaybackEngineEvents,
+} from "@/src/audio/playback/engine";
 import { Track } from "@tonejs/midi";
 import { Measure } from "@/src/audio/playback/core";
 
@@ -17,7 +20,7 @@ export default function SongPlayerPage() {
   const targetTrack = useMemo(() => {
     if (state.value === "idle" || state.value === "loading") return null;
     if (!playableTracks.length) return null;
-    return engineRef.current?.getSource()?.tracks[0];
+    return engineRef.current?.getSource()?.tracks[2];
   }, [state.value, playableTracks]);
 
   return (
@@ -50,9 +53,15 @@ function TrackVisualizer({ engineRef, track }: TrackVisualizerProps) {
   const currentTime = useSyncExternalStore(
     (onStoreChange) => {
       const handler = () => onStoreChange();
-      engineRef.current?.subscribe("current-time-changed", handler);
+      engineRef.current?.subscribe(
+        MIDIPlaybackEngineEvents.CURRENT_TIME_CHANGED,
+        handler,
+      );
       return () => {
-        engineRef.current?.unsubscribe("current-time-changed", handler);
+        engineRef.current?.unsubscribe(
+          MIDIPlaybackEngineEvents.CURRENT_TIME_CHANGED,
+          handler,
+        );
       };
     },
     () => engineRef.current?.getCurrentTime() ?? 0,
