@@ -2,100 +2,156 @@ import { Midi, Track } from "@tonejs/midi";
 import * as Tone from "tone";
 import { InstrumentAudioEngine } from "../core";
 import { MIDIPlaybackError, MIDISourceError } from "./errors";
-import { AudioPlayerEngine, AudioPlayerSourceLoadResult } from "./core";
+import {
+  AudioPlayerEngine,
+  AudioPlayerSourceLoadResult,
+  InstrumentalAudioPlayerEngine,
+  MeasurableAudioPlayerEngine,
+  Measure,
+  ObservableAudioPlayerEngine,
+} from "./core";
+
+export type MIDIPlaybackEngineEventMap = {
+  "time-signature-changed": [number, number];
+  "beats-per-minute-changed": number;
+  "total-length-changed": number;
+  "current-time-changed": number;
+};
 
 /**
  * Imports `.mid` files and plays them using the ToneJS library.
  * @implements {AudioPlayerEngine<Midi>}
  * @see {@link AudioPlayerEngine} for the interface implementation.
  */
-export class MIDIPlaybackEngine implements AudioPlayerEngine<Midi> {
-  /**
-   * A map of instrument keys to instrument audio engines.
-   * @see {@link InstrumentAudioEngine} for the interface implementation.
-   */
-  private _instrumentMap: Map<string, InstrumentAudioEngine> = new Map();
+export class MIDIPlaybackEngine
+  implements
+    AudioPlayerEngine<Midi>,
+    ObservableAudioPlayerEngine<any>,
+    InstrumentalAudioPlayerEngine,
+    MeasurableAudioPlayerEngine
+{
+  private source: Midi | null = null;
 
-  /**
-   * The loaded MIDI file source.
-   */
-  private _midiFile: Midi | null = null;
+  private readonly observers: Map<string, Set<(data: any) => void>> = new Map();
+  private readonly orchestrator: Map<string, InstrumentAudioEngine> = new Map();
+  private readonly transport = Tone.getTransport();
 
-  /**
-   * The ToneJS transport instance.
-   */
-  private _transport = Tone.getTransport();
+  subscribe<K extends string | number | symbol>(
+    event: K,
+    callback: (data: any) => void,
+  ): void {
+    const eventKey = String(event);
+    if (!this.observers.has(eventKey)) {
+      this.observers.set(eventKey, new Set());
+    }
+    this.observers.get(eventKey)!.add(callback);
+  }
 
-  /**
-   * The default BPM. If the MIDI file does not specify any BPM, it will be playing at 120 BPM.
-   */
-  private _defaultBpm = 120;
-
-  /**
-   * Multiplier for the BPM.
-   * 1 means the BPM will be the same as the MIDI file.
-   * Higher values will make the playback faster.
-   * Lower values will make the playback slower.
-   */
-  private _bpmScale = 1;
-
-  /**
-   * Generates a key for the instrument.
-   * @param family - The family of the instrument.
-   * @param name - The name of the instrument.
-   * @returns The key for the instrument in string type.
-   */
-  private generateInstrumentKey(family: string, name: string) {
-    return `${family}__${name}`;
+  unsubscribe<K extends string | number | symbol>(
+    event: K,
+    callback: (data: any) => void,
+  ): void {
+    const eventKey = String(event);
+    this.observers.get(eventKey)?.delete(callback);
   }
 
   /**
-   * Registers an instrument into the audio player engine.
-   *
-   * @param family - The family of the instrument.
-   * @param name - The name of the instrument.
-   * @param instrument - The instrument audio engine to use for the instrument.
-   * @returns The audio player engine itself.
+   * Helper to emit events to all registered observers.
+   * @param event The event name
+   * @param data The data to send to observers
    */
-  withInstrument(
-    family: string,
-    name: string,
-    instrument: InstrumentAudioEngine,
-  ) {
-    this._instrumentMap.set(
-      this.generateInstrumentKey(family, name),
-      instrument,
+  private emit<K extends keyof MIDIPlaybackEngineEventMap>(
+    event: K,
+    data: MIDIPlaybackEngineEventMap[K],
+  ): void {
+    const observers = this.observers.get(String(event));
+    if (observers) {
+      for (const cb of observers) {
+        try {
+          cb(data);
+        } catch (error) {
+          console.error(`Error in observer for ${String(event)}`, error);
+        }
+      }
+    }
+  }
+
+  registerInstrument(key: string, instrument: InstrumentAudioEngine): void {
+    this.orchestrator.set(key, instrument);
+  }
+
+  unregisterInstrument(key: string): void {
+    this.orchestrator.delete(key);
+  }
+
+  getTimeSignature(): [number, number] {
+    const timeSignature = this.source?.header.timeSignatures[0]?.timeSignature;
+    return timeSignature ? [timeSignature[0], timeSignature[1]] : [4, 4];
+  }
+
+  getBeatsPerMinute(): number {
+    return this.source?.header.tempos[0]?.bpm ?? 120;
+  }
+
+  getCurrentTime(): number {
+    return this.transport.seconds;
+  }
+
+  getTotalLength(): number {
+    return this.source?.duration ?? 0;
+  }
+
+  getTQuarter(): number {
+    return 60 / this.getBeatsPerMinute();
+  }
+
+  getTMeasure(): number {
+    const tQuarter = this.getTQuarter();
+    const timeSignature = this.getTimeSignature();
+    return tQuarter * (timeSignature[0] / (4 / timeSignature[1]));
+  }
+
+  getTotalMeasures(): number {
+    return Math.ceil(this.getTotalLength() / this.getTMeasure());
+  }
+
+  getMeasuresForTrack(track: Track): Measure[] {
+    const measures = Array.from(
+      { length: this.getTotalMeasures() },
+      () => [] as any,
     );
-    return this;
+
+    const tMeasure = this.getTMeasure();
+
+    for (const note of track.notes) {
+      const measureIndex = Math.floor(note.time / tMeasure);
+      const relativeStart = note.time % tMeasure;
+
+      const calculatedDuration =
+        note.duration > tMeasure ? tMeasure - relativeStart : note.duration;
+
+      measures[measureIndex].push({
+        note: note.name,
+        pitch: note.midi,
+        startTime: relativeStart,
+        duration: calculatedDuration,
+      });
+    }
+
+    return measures.map((measure, index) => ({
+      index,
+      notes: measure,
+    }));
   }
 
-  /**
-   * Registers a BPM scale into the audio player engine.
-   *
-   * @param scale - The target BPM scale. ( min: 0.1, default: 1 )
-   * @returns The audio player engine itself.
-   */
-  withBpmScale(scale: number) {
-    this._bpmScale = Math.max(0.1, scale);
-    return this;
+  getCurrentMeasure(): number {
+    return Math.floor(this.getCurrentTime() / this.getTMeasure());
   }
 
-  /**
-   * Extracts the instrument instance from the registered instrument map.
-   * @param track - The track to extract the instrument from.
-   * @returns The instrument audio engine instance. Returns `null` if the instrument is not registered.
-   */
-  private resolveInstrument(track: Track): InstrumentAudioEngine | null {
-    const family = track.instrument.family;
-    const name = track.instrument.name;
-    const instrumentKey = this.generateInstrumentKey(family, name);
-    return this._instrumentMap.get(instrumentKey) ?? null;
+  getSource(): Midi | null {
+    return this.source;
   }
 
-  /**
-   * Loads the MIDI file into the audio player engine.
-   * @see {@link AudioPlayerEngine.load()} for the interface implementation.
-   */
   async load(source: string): Promise<AudioPlayerSourceLoadResult<Midi>> {
     try {
       const response = await fetch(source);
@@ -107,19 +163,12 @@ export class MIDIPlaybackEngine implements AudioPlayerEngine<Midi> {
       const arrayBuffer = await response.arrayBuffer();
       const midi = new Midi(arrayBuffer);
 
-      this._midiFile = midi;
+      this.source = midi;
 
-      const instrumentSet = new Set<string>();
-
-      for (const track of midi.tracks) {
-        instrumentSet.add(
-          this.generateInstrumentKey(
-            track.instrument.family,
-            track.instrument.name,
-          ),
-        );
-      }
-      console.debug("Instrument set : ", instrumentSet);
+      this.emit("time-signature-changed", this.getTimeSignature());
+      this.emit("beats-per-minute-changed", this.getBeatsPerMinute());
+      this.emit("total-length-changed", this.getTotalLength());
+      this.emit("current-time-changed", this.getCurrentTime());
 
       return {
         success: true,
@@ -139,30 +188,25 @@ export class MIDIPlaybackEngine implements AudioPlayerEngine<Midi> {
     }
   }
 
-  /**
-   * Plays the source.
-   * @see {@link AudioPlayerEngine.play()} for the interface implementation.
-   */
-  async play() {
-    if (this._midiFile === null) {
+  async play(): Promise<void> {
+    if (this.source === null) {
       throw new MIDIPlaybackError(
         "MIDI file is not loaded",
         "No MIDI file loaded",
       );
     }
-    console.debug("play -> playing");
     await Tone.start();
 
-    this._transport.stop();
-    this._transport.cancel();
+    this.transport.stop();
+    this.transport.cancel();
 
-    this._transport.position = 0;
-    this._transport.bpm.value =
-      (this._midiFile.header.tempos[0]?.bpm ?? this._defaultBpm) *
-      this._bpmScale;
+    this.transport.position = 0;
+    this.transport.bpm.value = this.getBeatsPerMinute();
 
-    this._midiFile.tracks.forEach((track) => {
-      const instrument = this.resolveInstrument(track);
+    this.source.tracks.forEach((track) => {
+      const instrument = this.orchestrator.get(
+        track.instrument.family + "__" + track.instrument.name,
+      );
 
       if (!instrument) {
         console.warn(
@@ -177,48 +221,44 @@ export class MIDIPlaybackEngine implements AudioPlayerEngine<Midi> {
         const start = note.time;
         const end = start + note.duration;
 
-        this._transport.schedule(() => {
+        this.transport.schedule(() => {
           void instrument.playNote({ note: n, velocity: vel });
         }, start);
 
-        this._transport.schedule(() => {
+        this.transport.schedule(() => {
           void instrument.muteNote({ note: n });
         }, end);
       });
     });
 
-    this._transport.start();
+    this.transport.scheduleRepeat((time) => {
+      Tone.getDraw().schedule(() => {
+        this.emit("current-time-changed", this.getCurrentTime());
+      }, time);
+    }, "0.1");
+
+    this.transport.start();
   }
 
-  /**
-   * TODO: Implement `pause()` method.
-   * @see {@link AudioPlayerEngine.pause()} for the interface implementation.
-   */
-  async pause() {}
+  async restart(): Promise<void> {
+    return Promise.resolve();
+  }
 
-  /**
-   * TODO: Implement `stop()` method.
-   * @see {@link AudioPlayerEngine.stop()} for the interface implementation.
-   */
-  async stop() {}
+  async pause(): Promise<void> {
+    return Promise.resolve();
+  }
 
-  /**
-   * TODO: Implement `restart()` method.
-   * @see {@link AudioPlayerEngine.restart()} for the interface implementation.
-   */
-  async restart() {}
+  async stop(): Promise<void> {
+    return Promise.resolve();
+  }
 
-  /**
-   * Disposes the audio player engine.
-   * @see {@link AudioPlayerEngine.dispose()} for the interface implementation.
-   */
-  async dispose() {
-    this._transport.stop();
-    this._transport.cancel();
+  dispose(): void {
+    this.transport.stop();
+    this.transport.cancel();
 
-    this._instrumentMap.forEach((instrument) => instrument.dispose());
-    this._instrumentMap.clear();
+    this.orchestrator.forEach((instrument) => instrument.dispose());
+    this.orchestrator.clear();
 
-    this._midiFile = null;
+    this.source = null;
   }
 }
