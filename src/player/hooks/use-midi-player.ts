@@ -28,12 +28,12 @@ export function useMIDIPlayer(source: string) {
   if (!engineRef.current) {
     engineRef.current = new MIDIPlaybackEngine();
     (engineRef.current as MIDIPlaybackEngine).registerInstrument(
-      "bass__electric bass (pick)",
-      new SynthBassInstrument(),
+      "piano__bright acoustic piano",
+      new SynthRetroPianoInstrument(),
     );
     (engineRef.current as MIDIPlaybackEngine).registerInstrument(
-      "synth lead__lead 6 (voice)",
-      new SynthRetroPianoInstrument(),
+      "bass__electric bass (finger)",
+      new SynthBassInstrument(),
     );
   }
 

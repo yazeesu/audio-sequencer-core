@@ -235,7 +235,7 @@ export class MIDIPlaybackEngine
       Tone.getDraw().schedule(() => {
         this.emit("current-time-changed", this.getCurrentTime());
       }, time);
-    }, "0.1");
+    }, 1 / 60);
 
     this.transport.start();
   }
