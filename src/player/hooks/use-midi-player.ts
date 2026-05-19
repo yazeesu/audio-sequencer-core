@@ -1,11 +1,12 @@
 import { SynthBassInstrument } from "@/src/audio/instruments/synth-bass-guitar";
-import { SynthRetroPianoInstrument } from "@/src/audio/instruments/synth-retro-piano";
 import { AudioPlayerEngine } from "@/src/audio/playback/core";
 import { MIDIPlaybackEngine } from "@/src/audio/playback/engine";
 import { Midi } from "@tonejs/midi";
 import { useMachine } from "@xstate/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { audioPlayerMachine } from "../context/audio-player-machine";
+import { TinpotsPianoInstrument } from "@/src/audio/instruments/tinpots-piano";
+import { BreadBreadOverdrivenGuitarInstrument } from "@/src/audio/instruments/bread-bread-overdriven-guitar";
 
 export type PlayableTrack = {
   id: number;
@@ -29,7 +30,11 @@ export function useMIDIPlayer(source: string) {
     engineRef.current = new MIDIPlaybackEngine();
     (engineRef.current as MIDIPlaybackEngine).registerInstrument(
       "piano__bright acoustic piano",
-      new SynthRetroPianoInstrument(),
+      new TinpotsPianoInstrument(),
+    );
+    (engineRef.current as MIDIPlaybackEngine).registerInstrument(
+      "guitar__acoustic guitar (nylon)",
+      new BreadBreadOverdrivenGuitarInstrument(),
     );
     (engineRef.current as MIDIPlaybackEngine).registerInstrument(
       "bass__electric bass (finger)",
