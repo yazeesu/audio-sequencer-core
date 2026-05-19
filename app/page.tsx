@@ -1,18 +1,20 @@
 "use client";
 
 import { InstrumentAudioEngine } from "@/src/audio/core";
-import { SynthBassInstrument } from "@/src/audio/instruments/synth-bass-guitar";
+import { BreadBreadOverdrivenGuitarInstrument } from "@/src/audio/instruments/bread-bread-overdriven-guitar";
+import { TinpotsPianoInstrument } from "@/src/audio/instruments/tinpots-piano";
 import SimplePiano from "@/src/instruments/simple-piano/simple-piano";
 import { createPianoLayout } from "@/src/piano/layout";
 import { useEffect, useRef } from "react";
 
-const PIANO_LAYOUT = createPianoLayout(1, 3);
+const PIANO_LAYOUT = createPianoLayout(1, 4);
 
 export default function Home() {
   const instrumentAudioEngineRef = useRef<InstrumentAudioEngine | null>(null);
 
   useEffect(() => {
-    instrumentAudioEngineRef.current = new SynthBassInstrument();
+    instrumentAudioEngineRef.current =
+      new BreadBreadOverdrivenGuitarInstrument();
 
     return () => {
       instrumentAudioEngineRef.current?.dispose();
@@ -21,7 +23,7 @@ export default function Home() {
 
   return (
     <div className="relative w-screen min-h-screen">
-      <div className="absolute bottom-8 w-full px-16">
+      <div className="absolute bottom-8 w-full px-8">
         <SimplePiano
           audioEngine={instrumentAudioEngineRef}
           layout={PIANO_LAYOUT}
