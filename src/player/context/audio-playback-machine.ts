@@ -4,9 +4,9 @@ import {
 } from "@/src/audio/instruments";
 import { createMIDIPlaybackEngine } from "@/src/audio/playback";
 import { AudioPlayerEngine } from "@/src/audio/playback/core";
-import { MIDIPlaybackEngine } from "@/src/audio/playback/engine";
+import { MIDIPlaybackEngine } from "@/src/audio/playback/engine/midi-playback-engine";
 import { SongData } from "@/src/shared/types";
-import { Midi } from "@tonejs/midi";
+import { Midi, Track } from "@tonejs/midi";
 import { assign, fromPromise, setup } from "xstate";
 
 /**
@@ -137,7 +137,7 @@ export const audioPlaybackEngineMachine = setup({
       const playableTracks =
         (input.playbackEngineRef.current as MIDIPlaybackEngine)
           .getSource()
-          ?.tracks.map((track, index) => ({
+          ?.tracks.map((track: Track, index: number) => ({
             id: index,
             name: track.name,
             instrument: {
