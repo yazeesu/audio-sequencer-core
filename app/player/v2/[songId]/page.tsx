@@ -5,8 +5,13 @@ import { MIDIPlaybackEngine } from "@/src/audio/playback/engine/midi-playback-en
 import { useQuery } from "@tanstack/react-query";
 import { songsRequestService } from "@/src/shared/services/http/requests";
 import { useAudioPlaybackEngine } from "@/src/player/hooks/use-audio-playback-engine";
-import TrackVisualizer from "@/src/player/components/track-visualizer";
 import { tailwind } from "@/src/shared/utils/tailwind";
+import { useAudioPlaybackTime } from "@/src/player/hooks/use-audio-playback-time";
+import {
+  PianoRollRef,
+  PianoRollVisualizer,
+} from "@/src/player/components/piano-roll/piano-roll-visualizer";
+import { useEffect, useMemo, useRef } from "react";
 
 export default function SongPlayerPage() {
   const { songId } = useParams<{ songId: string }>();
@@ -29,6 +34,41 @@ export default function SongPlayerPage() {
   } = useAudioPlaybackEngine(song);
 
   const engine = playbackEngineRef.current as MIDIPlaybackEngine | null;
+  const isPlaying = state.matches("playing");
+
+  const pianoRollRef = useRef<PianoRollRef>(null);
+
+  const audioTime = useAudioPlaybackTime(
+    playbackEngineRef.current as MIDIPlaybackEngine | null,
+    isPlaying,
+  );
+
+  const midiNotes = useMemo(
+    () =>
+      currentTrack?.notes.map((note, index) => ({
+        id: `${currentTrack.instrument.name}-${note.midi}-${note.time}-${index}`,
+        pitch: note.midi,
+        start: note.time,
+        duration: note.duration,
+        velocity: note.velocity,
+      })) ?? [],
+    [currentTrack],
+  );
+
+  useEffect(() => {
+    pianoRollRef.current?.updateNotes(midiNotes);
+  }, [midiNotes]);
+
+  useEffect(() => {
+    console.log("audioTime", audioTime);
+    pianoRollRef.current?.updateScroll(audioTime);
+  }, [audioTime]);
+
+  useEffect(() => {
+    if (isPlaying) return;
+    const t = engine?.getCurrentTime() ?? 0;
+    pianoRollRef.current?.updateScroll(t);
+  }, [isPlaying, engine]);
 
   return (
     <div className="flex flex-col gap-4 p-16">
@@ -82,10 +122,10 @@ export default function SongPlayerPage() {
       </div>
 
       {engine && currentTrack && context.metadata && (
-        <TrackVisualizer
-          playbackEngine={engine}
-          observedTrack={currentTrack}
-          isPlaying={status === "playing"}
+        <PianoRollVisualizer
+          ref={pianoRollRef}
+          width={window.innerWidth - 128}
+          initialNotes={midiNotes}
         />
       )}
     </div>

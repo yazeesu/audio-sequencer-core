@@ -5,7 +5,8 @@ export function useAudioPlaybackTime(
   playbackEngineRef: MeasurableAudioPlayerEngine | null,
   isPlaying: boolean,
 ): number {
-  const timeRef = useRef<number>(0);
+  const timeRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
 
   return useSyncExternalStore(
     (onStoreChange) => {
@@ -14,8 +15,9 @@ export function useAudioPlaybackTime(
       const tick = () => {
         timeRef.current = playbackEngineRef.getCurrentTime();
         onStoreChange();
-        timeRef.current = requestAnimationFrame(tick);
+        rafRef.current = requestAnimationFrame(tick);
       };
+
       timeRef.current = playbackEngineRef.getCurrentTime();
       let frame = requestAnimationFrame(tick);
       return () => cancelAnimationFrame(frame);
