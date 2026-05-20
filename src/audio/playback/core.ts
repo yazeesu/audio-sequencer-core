@@ -127,6 +127,8 @@ export interface InstrumentalAudioPlayerEngine {
    * @param key - The key of the instrument to remove.
    */
   unregisterInstrument(key: string): void;
+
+  clearInstruments(): void;
 }
 
 /**
