@@ -1,5 +1,5 @@
 import { Measure } from "@/src/audio/playback/core";
-import { MIDIPlaybackEngine } from "@/src/audio/playback/engine";
+import { MIDIPlaybackEngine } from "@/src/audio/playback/engine/midi-playback-engine";
 import { Track } from "@tonejs/midi";
 import React, { FC, useMemo } from "react";
 import { useAudioPlaybackTime } from "../hooks/use-audio-playback-time";
