@@ -13,10 +13,12 @@
     "@tonejs/midi": "^2.0.28",
     "@xstate/react": "^6.1.0",
     "axios": "^1.16.1",
+    "clsx": "^2.1.1",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "reflect-metadata": "^0.2.2",
+    "tailwind-merge": "^3.6.0",
     "tone": "^15.1.22",
     "tsyringe": "^4.10.0",
     "xstate": "^5.31.1"

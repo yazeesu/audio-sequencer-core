@@ -27,9 +27,13 @@ export function useAudioPlaybackEngine(currentSong?: SongData) {
   useEffect(() => {
     if (!currentSong) return;
     loadCurrentSong(currentSong);
+    return () => {
+      playbackEngineRef.current?.dispose();
+    };
   }, [currentSong?.id]);
 
   return {
+    state,
     status: state.value,
     context: state.context,
     playbackEngineRef,
