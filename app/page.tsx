@@ -1,30 +1,27 @@
 "use client";
 
-import { InstrumentAudioEngine } from "@/src/audio/core";
-import { BreadBreadOverdrivenGuitarInstrument } from "@/src/audio/instruments/bread-bread-overdriven-guitar";
-import { TinpotsPianoInstrument } from "@/src/audio/instruments/tinpots-piano";
-import SimplePiano from "@/src/instruments/simple-piano/simple-piano";
-import { createPianoLayout } from "@/src/piano/layout";
+import SimplePiano from "@/src/features/instruments/simple-piano/simple-piano";
+import { createPianoLayout } from "@/src/features/piano/layout";
 import { useEffect, useRef } from "react";
 
 const PIANO_LAYOUT = createPianoLayout(1, 4);
 
 export default function Home() {
-  const instrumentAudioEngineRef = useRef<InstrumentAudioEngine | null>(null);
+  // const instrumentAudioEngineRef = useRef<InstrumentAudioEngine | null>(null);
 
-  useEffect(() => {
-    instrumentAudioEngineRef.current =
-      new BreadBreadOverdrivenGuitarInstrument();
+  // useEffect(() => {
+  //   instrumentAudioEngineRef.current =
+  //     new BreadBreadOverdrivenGuitarInstrument();
 
-    return () => {
-      instrumentAudioEngineRef.current?.dispose();
-    };
-  }, []);
+  //   return () => {
+  //     instrumentAudioEngineRef.current?.dispose();
+  //   };
+  // }, []);
 
   return (
     <div className="relative w-screen min-h-screen">
       <div className="absolute bottom-8 w-full px-8">
-        <SimplePiano
+        {/* <SimplePiano
           audioEngine={instrumentAudioEngineRef}
           layout={PIANO_LAYOUT}
         >
@@ -36,7 +33,7 @@ export default function Home() {
               <SimplePiano.StandardBlackKey note={note} style={style} />
             )}
           />
-        </SimplePiano>
+        </SimplePiano> */}
       </div>
     </div>
   );
