@@ -38,21 +38,18 @@ export default function SongPlayerPage() {
       <div className="flex items-center gap-4">
         <button
           className="bg-emerald-600 w-[144px] text-white px-4 py-2 rounded-md hover:cursor-pointer hover:bg-emerald-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!state.matches("ready") || state.matches("playing")}
           onClick={handlePlay}
         >
           Play
         </button>
         <button
           className="bg-amber-600 w-[144px] text-white px-4 py-2 rounded-md hover:cursor-pointer hover:bg-amber-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled
           onClick={handlePause}
         >
           Pause
         </button>
         <button
           className="bg-red-600 w-[144px] text-white px-4 py-2 rounded-md hover:cursor-pointer hover:bg-red-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled
           onClick={handleStop}
         >
           Stop
@@ -85,7 +82,7 @@ export default function SongPlayerPage() {
         <TrackVisualizer
           playbackEngine={engine}
           observedTrack={currentTrack}
-          isPlaying={status === "playing"}
+          isPlaying={state.matches("playing") || state.matches("paused")}
         />
       )}
     </div>

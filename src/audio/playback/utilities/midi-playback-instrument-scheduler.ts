@@ -30,6 +30,12 @@ export class MIDIPlaybackInstrumentScheduler {
     this.orchestrator.clear();
   }
 
+  muteAllNotes(): void {
+    this.orchestrator.forEach((instrument) => {
+      void instrument.muteAllNotes();
+    });
+  }
+
   scheduleNotes(source: Midi | null, transport: typeof Tone.Transport): void {
     if (source === null) return;
     source.tracks.forEach((track, index) => {

@@ -138,35 +138,59 @@ export class MIDIPlaybackEngine
   }
 
   async play(): Promise<void> {
+    const source = this.getSourceOrThrow();
+
+    if (this.transport.state === "paused") {
+      this.transport.start();
+      return;
+    }
+
+    await this.startFromBeginning(source);
+  }
+
+  async restart(): Promise<void> {
+    await this.startFromBeginning(this.getSourceOrThrow());
+  }
+
+  async pause(): Promise<void> {
+    this.getSourceOrThrow();
+
+    if (this.transport.state === "started") {
+      this.instrumentScheduler.muteAllNotes();
+      this.transport.pause();
+    }
+  }
+
+  async stop(): Promise<void> {
+    this.instrumentScheduler.muteAllNotes();
+    this.transport.stop();
+    this.transport.cancel();
+  }
+
+  private getSourceOrThrow(): Midi {
     if (this.source === null) {
       throw new MIDIPlaybackError(
         "MIDI file is not loaded",
         "No MIDI file loaded",
       );
     }
+
+    return this.source;
+  }
+
+  private async startFromBeginning(source: Midi): Promise<void> {
     await Tone.start();
 
+    this.instrumentScheduler.muteAllNotes();
     this.transport.stop();
     this.transport.cancel();
 
     this.transport.position = 0;
     this.transport.bpm.value = this.getBeatsPerMinute();
 
-    this.instrumentScheduler.scheduleNotes(this.source, this.transport);
+    this.instrumentScheduler.scheduleNotes(source, this.transport);
 
     this.transport.start();
-  }
-
-  async restart(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async pause(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  async stop(): Promise<void> {
-    return Promise.resolve();
   }
 
   dispose(): void {
