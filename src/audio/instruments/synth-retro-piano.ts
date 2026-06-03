@@ -59,6 +59,10 @@ export class SynthRetroPianoInstrument implements InstrumentAudioEngine {
     this.synth.triggerRelease(note);
   }
 
+  async muteAllNotes(): Promise<void> {
+    this.synth.releaseAll();
+  }
+
   dispose(): void {
     this.synth.dispose();
     this.highpass.dispose();

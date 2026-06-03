@@ -142,6 +142,11 @@ export class SynthBassInstrument implements InstrumentAudioEngine {
     this.synth.triggerRelease(note);
   }
 
+  async muteAllNotes(): Promise<void> {
+    this.synth.releaseAll();
+    this.noiseEnvelope.triggerRelease();
+  }
+
   dispose(): void {
     this.synth.dispose();
     this.compressor.dispose();

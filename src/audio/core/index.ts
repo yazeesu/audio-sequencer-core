@@ -31,6 +31,11 @@ export interface InstrumentAudioEngine {
   muteNote(options: { note: string }): Promise<void>;
 
   /**
+   * Mutes all currently playing notes.
+   */
+  muteAllNotes(): Promise<void>;
+
+  /**
    * Disposes the audio engine.
    * This function should be called when the audio engine is no longer needed.
    * It cleans up all the resources used by the audio engine in order to prevent memory leaks.

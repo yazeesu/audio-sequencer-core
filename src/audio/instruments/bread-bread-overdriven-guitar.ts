@@ -45,6 +45,11 @@ export class BreadBreadOverdrivenGuitarInstrument implements InstrumentAudioEngi
     this.sampler?.triggerRelease(note);
   }
 
+  async muteAllNotes(): Promise<void> {
+    await this.loadedSample;
+    this.sampler?.releaseAll();
+  }
+
   dispose(): void {
     this.sampler?.dispose();
   }

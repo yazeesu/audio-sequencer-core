@@ -47,6 +47,11 @@ export class TinpotsPianoInstrument implements InstrumentAudioEngine {
     this.sampler?.triggerRelease(note);
   }
 
+  async muteAllNotes(): Promise<void> {
+    await this.loadedSample;
+    this.sampler?.releaseAll();
+  }
+
   dispose(): void {
     this.sampler?.dispose();
   }
