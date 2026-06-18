@@ -1,23 +1,11 @@
-import axios, { AxiosInstance } from "axios";
+import axios from "axios";
+
+const DEFAULT_TIMEOUT = 15_000;
 
 export const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,
+  timeout: DEFAULT_TIMEOUT,
 });
-
-export abstract class APIService {
-  constructor(protected readonly axiosInstance: AxiosInstance) {}
-}
-
-export class APIError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly data: any,
-  ) {
-    super(message);
-  }
-}
